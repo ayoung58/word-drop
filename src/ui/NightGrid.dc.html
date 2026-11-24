@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>B Night Grid (dark, Tetris-like)</title><script src="./support.js"></script></head>
+<body><x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.t{width:360px;height:640px;box-sizing:border-box;padding:20px 18px;display:flex;flex-direction:column;gap:14px;background:var(--bg);color:var(--ink);font-family:'Chakra Petch',sans-serif}
+.h{display:flex;justify-content:space-between;align-items:center}
+.h div{display:flex;gap:6px}
+.h small{font-size:12px;letter-spacing:.12em;opacity:.8}
+.sc{font-size:34px;font-weight:700;line-height:1}
+.h button{width:44px;height:44px;border-radius:var(--r);border:1px solid var(--line);background:var(--tile);color:var(--ink);display:flex;align-items:center;justify-content:center}
+.g{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+.g i,.g b,.g u{aspect-ratio:1;border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:700;font-size:23px;box-sizing:border-box}
+.g i{background:var(--e);font-size:11px;font-weight:600;opacity:.95}
+.g i.x2{background:var(--x2)}.g i.x3{background:var(--x3)}
+.g b{background:var(--tile);border:1px solid var(--line);box-shadow:var(--sh)}
+.g b.k{background:var(--ok);border-color:var(--okb)}.g b.p{background:var(--op)}
+.g b.f{border:2px solid var(--acc);box-shadow:0 0 0 3px var(--glow)}
+.g u{background:var(--fill)}
+.c{display:flex;gap:8px}
+.c button,.q button{flex:1;border-radius:var(--r);border:1px solid var(--line);background:var(--tile);color:var(--ink);font-family:inherit;font-size:12px;box-shadow:var(--sh)}
+.c button{padding:8px 0;line-height:1.2}.c button b{font-size:21px}
+.c button.on{border:2px solid var(--acc)}
+.q{display:flex;gap:6px}.q button{padding:10px 0;box-shadow:none}
+</style>
+</helmet>
+<div class="t" style="--bg:#0E1320;--ink:#E9EEF8;--tile:#1D2535;--line:#2C364B;--e:#151C2B;--fill:#04060B;--ok:#1C6B58;--okb:#34E0B4;--op:#6B5A1F;--x2:#213A6E;--x3:#5A2748;--acc:#2EE6D6;--glow:#134A50;--sh:0 2px 0 #0A0F1A;--r:4px">
+<div class="h"><div style="flex-direction:column;gap:2px"><small>SCORE</small><span class="sc">27</span></div><div><button type="button" aria-label="Pause"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button><button type="button" aria-label="Restart"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M20 12a8 8 0 1 1-3-6.2M20 4v5h-5"/></svg></button></div></div>
+<div class="g"><i></i><i></i><i></i><i></i><i class="x3">&times;3</i><i></i><i></i><i class="x2">&times;2</i><i></i><b class="f">E</b><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="x2">&times;2</i><i></i><i></i><i></i><i></i><i></i><i></i><b class="p">H</b><b class="p">A</b><b class="p">T</b><i></i><i></i><i></i><b class="k">P</b><b class="k">L</b><b class="k">A</b><b class="k">N</b><u></u><i></i><b class="k">S</b><b class="k">T</b><b class="k">O</b><b class="k">N</b><b class="k">E</b><u></u></div>
+<div class="c"><button type="button" class="on">Vowel<br><b>E</b></button><button type="button">Consonant<br><b>R</b></button><button type="button">Filler<br><b>&minus;1</b></button></div>
+<div class="q"><button type="button">Wildcard 2</button><button type="button">Peek 2</button><button type="button">Freeze 2</button><button type="button">Shovel</button></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":360,"height":640}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body></html>

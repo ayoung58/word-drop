@@ -3,8 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>word-drop</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Word Drop</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&display=swap" rel="stylesheet" />
+    <style>
+      /* Layout only. Colors come from src/ui/theme.ts. */
+      html, body { margin: 0; height: 100%; overflow: hidden; }
+      body { touch-action: none; user-select: none; -webkit-user-select: none; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+      #app { width: 100%; height: 100%; }
+    </style>
   </head>
   <body>
     <div id="app"></div>

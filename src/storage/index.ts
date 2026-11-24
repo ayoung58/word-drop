@@ -15,7 +15,8 @@ const DEFAULTS: StoredData = { bestScore: 0, streak: 0, lastPlayedDate: '' };
 export function load(): StoredData {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as StoredData) : DEFAULTS;
+    // Spread over the defaults so a save from an older version still has every field.
+    return raw ? { ...DEFAULTS, ...(JSON.parse(raw) as Partial<StoredData>) } : { ...DEFAULTS };
   } catch {
     // Corrupted data or storage unavailable — start fresh.
     return { ...DEFAULTS };
