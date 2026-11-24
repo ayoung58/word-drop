@@ -1,0 +1,45 @@
+---
+description: Word Drop project rules
+alwaysApply: true
+---
+
+# Word Drop: project rules
+
+## What this project is
+Word Drop is a mobile-first falling-letter word puzzle. Pieces (vowel, consonant or filler block) fall onto an 8x10 grid. Words closed off by a wall or a filler block score. Full design: docs/GDD.md.
+
+## Stack
+- TypeScript (strict), Vite, Phaser, Vitest. Capacitor is added later for Android and iOS.
+- Do not add a dependency or framework without asking first.
+
+## Architecture rules (never break these)
+1. All game rules live in src/core. Nothing in src/core imports Phaser, the DOM, window, localStorage or any browser API.
+2. src/core is deterministic. The only randomness is the seeded generator in src/core/rng.ts. Never use Math.random or Date.now in src/core.
+3. src/game and src/ui only draw state and send player actions to src/core. They never contain scoring or word rules.
+4. Colors, fonts, sizes and radii live in src/ui/theme.ts. No hard-coded colors elsewhere.
+5. Saved data (best score, streak, settings) goes through src/storage so it can be swapped later.
+
+## Game rules (source of truth, do not change without asking)
+- Grid is 8 columns by 10 rows. One piece falls at a time.
+- Piece types: vowel, consonant, filler, wildcard. A new piece starts as the last letter type used. Once the player switches away from a type, they cannot switch back to it for that piece. Switching restarts the drop from the top. The wildcard is a powerup; switching away from it refunds it.
+- A word counts only if it is a full run of letters (at least MIN_WORD_LENGTH, set in src/core/config.ts) bounded on both ends by the board edge or a filler block. Words read left to right and top to bottom.
+- Letters use Scrabble-style values. A premium square multiplies the word score (x2 or x3). Multipliers in one word multiply together.
+- A filler costs 1 point. The shovel costs 5 points, removes a tile, and the tiles above it fall.
+- Powerups: wildcard, peek, freeze, shovel. Pause freezes everything.
+- The game ends when no new piece can enter the board.
+- Score = closed words minus filler costs minus shovel costs. It can go down when a word is broken.
+
+## How to work
+- Write or update tests first for any rule change. Run npm test before saying a task is done.
+- Work in small steps: one feature or fix per change, and list the files changed.
+- If a request conflicts with the rules above, stop and ask.
+- Mobile first. Design for a 360 x 640 screen. Touch targets are at least 44 px.
+- Keep functions in src/core small and pure. Use strict types and no any.
+- Comments explain why, not what.
+- The developer is learning: briefly explain non-obvious choices.
+- Use the ENABLE word list in public/words. Do not add word lists with unclear licenses.
+
+## Commands
+- npm run dev -- --host : dev server reachable from the phone
+- npm test : unit tests
+- npm run build : production build
