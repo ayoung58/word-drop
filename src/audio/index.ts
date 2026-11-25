@@ -95,7 +95,9 @@ export function createAudio(): AudioManager {
   let ctx: AudioContext | null = null;
   let master: GainNode | null = null;
 
-  // Browsers keep audio locked until the player touches or presses something.
+  // Browsers keep audio locked until the player touches or presses something. iPhone Safari only
+  // accepts 'touchend' or 'click' for this (not 'pointerdown'), so listen to all of them.
+  const unlockEvents = ['pointerdown', 'touchend', 'click', 'keydown'] as const;
   const unlock = (): void => {
     if (!ctx) {
       ctx = new AudioContext();
@@ -105,12 +107,10 @@ export function createAudio(): AudioManager {
     }
     void ctx.resume();
     if (ctx.state === 'running') {
-      window.removeEventListener('pointerdown', unlock);
-      window.removeEventListener('keydown', unlock);
+      for (const name of unlockEvents) window.removeEventListener(name, unlock);
     }
   };
-  window.addEventListener('pointerdown', unlock);
-  window.addEventListener('keydown', unlock);
+  for (const name of unlockEvents) window.addEventListener(name, unlock);
 
   return {
     play(key, detail = 0) {

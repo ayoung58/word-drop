@@ -1,6 +1,6 @@
 # Word Drop: Project Status and Roadmap
 
-*Written 23 November 2026, after the "prototype V1" commit. This is the engineering status and plan. The game design itself lives in `Word Drop Game Design and Build Plan.md` (the GDD, to be moved to `docs/GDD.md`, see M0). The project rules live in `.cursor/rules/word-drop.mdc`.*
+*Written 23 November 2026, after the "prototype V1" commit. Updated 25 November 2026 after the M0 code work. This is the engineering status and plan. The game design itself lives in `docs/GDD.md` (the GDD). The project rules live in `.cursor/rules/word-drop.mdc`. Credits and licences are in `CREDITS.md`.*
 
 *Update this file at the end of each milestone: tick things off, move finished items into section 2, and add new findings to section 4.*
 
@@ -21,9 +21,10 @@
 
 | Area | Status |
 | --- | --- |
-| Game rules (`src/core`) | Done and tested (40 tests). Missing: game modes (Daily, Limited pool), a few test files. |
+| Game rules (`src/core`) | Done and tested (minimum word length 3). Missing: game modes (Daily, Limited pool). |
 | Playable screen (Phaser) | Done as a first version: board, touch buttons, powerups, pause, shovel, game over, animations, sound. Checked by hand in a desktop browser only, not yet on the S23. |
-| Word list | **Not added.** Without `public/words/enable.txt` no word can score, so the core mechanic cannot be played yet. |
+| Word list | **Added** (`enable.txt` plus two spare lists, all identical to upstream). Loads and filters correctly in tests (about 80,600 words of 3 to 8 letters). Not yet played with by hand, which is M1. |
+| Quality gates | TypeScript `strict` on, 144 tests in 11 files (including architecture guards), CI workflow written (needs your first push to run). |
 | Saved data | Best score is saved. Streak and settings are only a data shape, with no logic. |
 | Menu, Daily mode, tutorial, settings | Not started. |
 | Web deployment, installable web app | Not started. |
@@ -32,7 +33,7 @@
 
 **Where you are in the GDD schedule:** the Week 1 items are done except "load a real word list" and "touch controls working on your S23" (built, untested on the phone). Roughly half of Week 2 (board, HUD, powerup buttons, theme, sound, pause, game over) is also built.
 
-**The single most important next step** is the ENABLE word list (M1). Until it is in, nobody has actually played the real game.
+**The single most important next step** is to play the real game with the word list and look into the unexplained instant Game Over (M1). The word list is now in, but nobody has played with it by hand yet.
 
 ---
 
@@ -55,10 +56,10 @@ The data flow is one loop: a player action (touch, key) or a gravity tick goes i
 
 | File | What it does |
 | --- | --- |
-| `config.ts` | Board size 8x10, `MIN_WORD_LENGTH` (currently 2), costs (filler 1, shovel 5), peek and freeze lengths, starting charges (2 each), letter bags, Scrabble letter values, `fallIntervalMs` (700 ms, faster by 8 ms per piece, never below 250 ms). |
+| `config.ts` | Board size 8x10, `MIN_WORD_LENGTH` (3), costs (filler 1, shovel 5), peek and freeze lengths, starting charges (2 each), letter bags, Scrabble letter values, `fallIntervalMs` (700 ms, faster by 8 ms per piece, never below 250 ms). |
 | `types.ts` | `GameState`, `Piece`, `Cell`, `Action`, `WordHit`, `Evaluation`. State is plain data (cloneable, savable, replayable). |
 | `rng.ts` | Seeded random generator, `hashSeed`, `dailySeed(date)`. |
-| `words.ts` | `createDictionary` (case-insensitive, length filter, `?` wildcard lookup), `parseWordList`. |
+| `words.ts` | `createDictionary` (case-insensitive, length filter that defaults to `MIN_WORD_LENGTH`, `?` wildcard lookup), `parseWordList`. |
 | `board.ts` | Grid, premium squares (five x2, three x3), column collapse for the shovel, spawn column, bounds helpers. |
 | `pieces.ts` | Letter queues, one-way type switching, button previews (current and next letter). |
 | `scoring.ts` | `evaluate`: finds whole-run words across and down, marks them closed or open, applies premium multipliers, subtracts filler and shovel costs. |
@@ -107,7 +108,7 @@ Game rules implemented in core match the rules file: closed-word scoring in both
 
 ### 2.4 Audio (`src/audio`)
 
-Six synthesized effects: land (soft thunk), score (rising chime, one note more for longer words), shovel, switch, powerup, game over. No files and no licences. Audio is skipped until the first touch or key press (browsers require this). There is no mute setting yet.
+Six synthesized effects: land (soft thunk), score (rising chime, one note more for longer words), shovel, switch, powerup, game over. No files and no licences. Audio is skipped until the first touch or key press (browsers require this; the unlock listens to `pointerdown`, `touchend`, `click` and `keydown` for iOS). There is no mute setting yet.
 
 ### 2.5 Storage (`src/storage`)
 
@@ -115,11 +116,20 @@ Six synthesized effects: land (soft thunk), score (rising chime, one note more f
 
 ### 2.6 Tests
 
-40 tests, all passing, in four files: `words.test.ts` (4), `scoring.test.ts` (10), `rng.test.ts` (5), `game.test.ts` (21). Everything tested is in `src/core`. Run with `npm test`.
+144 tests in 11 files, all passing (about 4 seconds). Run with `npm test`.
+
+| File | Covers |
+| --- | --- |
+| `core/words.test.ts`, `scoring.test.ts`, `rng.test.ts`, `game.test.ts` | Dictionary, scoring (including the 3-letter minimum), rng, and the game step rules. |
+| `core/board.test.ts`, `pieces.test.ts`, `config.test.ts` | Grid and premium squares, collapse and spawn, queues and switching, button previews, and the pinned configuration values. |
+| `core/invariants.test.ts` | Random games: many seeds, hundreds of random actions each, checking the board and state rules after every step, plus games played until the board is full. |
+| `core/replay.test.ts` | Same seed and actions give the same state, JSON round trip, a golden game that fails if any rule changes by accident. (`core/testkit.ts` builds the random action lists.) |
+| `architecture.test.ts` | The rules file as tests: core is pure, colours only in `theme.ts`, `localStorage` only in `src/storage`, no `any`. |
+| `game/wordlists.test.ts` | The real files in `public/words` and `data/wordlists`: counts, plain a-z, and the dictionary built from `enable.txt` (3 to 8 letters). |
 
 ### 2.7 Project setup
 
-Vite, TypeScript, Phaser 4, Vitest installed. `.cursor/rules/word-drop.mdc` in place. Git remote is `github.com/ayoung58/word-drop`. Scripts: `dev`, `build` (`tsc` then `vite build`), `preview`, `test`.
+Vite, TypeScript (`strict`), Phaser 4, Vitest installed. `.cursor/rules/word-drop.mdc` in place. Git remote is `github.com/ayoung58/word-drop`. Scripts: `dev`, `build` (`tsc` then `vite build`), `preview`, `test`. `vite.config.ts` sets `base: './'`, so the build works from any folder. `.github/workflows/ci.yml` runs `npm ci`, `npm test` and `npm run build` on every push to `main` and every pull request. `README.md`, `CREDITS.md` and a placeholder `public/favicon.svg` exist.
 
 ---
 
@@ -129,7 +139,7 @@ The GDD's MVP scope is: Classic and Daily board; the four powerups; light and da
 
 | MVP item | Status | Milestone |
 | --- | --- | --- |
-| Classic mode | Done (needs the word list to be meaningful) | M1 |
+| Classic mode | Done, word list in place, needs hand play (M1) | M1 |
 | Daily board (same seed and premium layout for everyone) | Core has `dailySeed`. No mode, no menu, no UI. | M4 |
 | Wildcard, peek, freeze, shovel | Done | M3 (tuning) |
 | Night Grid theme (dark) | Done | |
@@ -153,32 +163,36 @@ Priority: **High** blocks real play or breaks a project rule. **Medium** should 
 
 | Item | Priority | Detail |
 | --- | --- | --- |
-| `public/words/enable.txt` | High | Missing. Manual step for you (see M1). The empty folder `public/words` exists but git does not track empty folders. |
-| `docs/GDD.md` | Medium | Currently a 5-line stub. The rules file points to it. Proposal: move the root `Word Drop Game Design and Build Plan.md` there (`git mv`) so there is one source of truth. |
-| Project `README.md` | Medium | None exists. Needs: what the game is, the four commands, how to test on a phone, link to the GDD and this file. |
-| Favicon and app icons | Medium | `index.html` links `/favicon.svg`, which does not exist (404 in the console). Real icons come in M6 and M7. |
-| `src/game/scenes/Menu.ts` | Medium | Empty placeholder. Built in M4. |
-| `.github/workflows/` | Medium | None yet. A test-and-build workflow is proposed in M0, the Android one in M7. |
-| `public/sounds/`, `public/fonts/` | Low | Not needed yet (sound is synthesized). Fonts need self-hosting in M6. |
-| `capacitor.config.ts` | Later | M7. |
-| Credits file (fonts, word list, any assets) | Medium | The GDD asks for one. Create it when ENABLE is added. |
-
-### 4.2 Rule conflicts and decisions already made but not applied
+Done in M0 (kept here as a record): `public/words/enable.txt` added, `docs/GDD.md` is the full plan, `README.md` and `CREDITS.md` written, placeholder `public/favicon.svg`, `.github/workflows/ci.yml` written.
 
 | Item | Priority | Detail |
 | --- | --- | --- |
-| `MIN_WORD_LENGTH` is 2, but the GDD's "decisions" section says **3 letters** | High | Core rule, so I did not change it without asking. Change plan: update the scoring tests first (they assume 2), then the constant. See section 7. |
-| `tsconfig.json` has no `"strict": true`, but the rules file says TypeScript strict | High | Checked: `tsc --strict` already passes with zero errors, so enabling it is a one-line change with no fallout. |
+| ~~`eowl.txt` and `freq-word.txt` shipped in the build~~ | Done | Moved to `data/wordlists/` (outside `public/`), so the build no longer carries them. Rule of thumb: everything in `public/` is shipped to players. `CREDITS.md` explains the EOWL licence condition if it is ever used. |
+| `eowl.txt` has 219 garbled accented lines | Low | It is an upstream problem. Recorded in `wordlists.test.ts`. Only matters if EOWL is ever used. |
+| Real favicon and app icons | Medium | The favicon is a placeholder (a W tile). Real icons come in M6 and M7. |
+| `src/game/scenes/Menu.ts` | Medium | Empty placeholder. Built in M4. |
+| Android workflow in `.github/workflows/` | Later | M7. |
+| `public/sounds/`, `public/fonts/` | Low | Not needed yet (sound is synthesized). Fonts need self-hosting in M6. |
+| `capacitor.config.ts` | Later | M7. |
+| `CREDITS.md`: fonts, icon, any assets | Medium | Word lists are credited. Chakra Petch is listed as "to be completed"; finish when fonts are self-hosted (M6). |
+| Project licence (`LICENSE`) | Medium | None chosen. Needed before the code is public. See section 7. |
+
+### 4.2 Rule conflicts and decisions already made but not applied
+
+None open. Both items below were resolved in M0:
+
+- `MIN_WORD_LENGTH` is now **3** (your decision). The scoring tests were updated first. The dictionary default follows the constant, and scoring tests use a 2-letter dictionary to prove the scoring itself rejects short words.
+- `tsconfig.json` now has `"strict": true`. It compiled with zero errors.
 
 ### 4.3 Bugs and risks found
 
 | Item | Priority | Detail |
 | --- | --- | --- |
 | Unexplained instant Game Over in one browser test | High | In a scripted test (reload, then send key events for wildcard, left, drop) the game ended with score 0 almost immediately. I could not reproduce or explain it before the dev server was stopped. It may be an artifact of sending synthetic events during scene start, but it must be ruled out. Plan: reproduce with a controller test (M2), then on the phone (M3). |
-| Audio may stay silent on iPhone | Medium | The audio unlock listens to `pointerdown` and `keydown`. iOS Safari generally needs `touchend` or `click`. Add those events. Cannot be tested without an iPhone, so make the change and verify later. |
+| Audio may stay silent on iPhone | Medium | Code fixed in M0: the unlock now also listens to `touchend` and `click`. Still unverified without an iPhone. |
 | Blurry rendering on high-density phone screens | Medium | The canvas is 360x640 and scaled up by CSS, so shapes may look soft on the S23 (text is already rendered at screen density). Needs a look on the phone, then probably rendering the canvas at 2x or 3x. |
 | Empty bars on tall phones | Medium | The S23 screen is taller than 16:9, and "scale to fit" leaves empty bands above and below the game. Options: leave it, or make the canvas height adapt and spread the layout. |
-| Word list size and speed | Medium | ENABLE is about 170,000 words. Loading and parsing on a phone should be fast, but measure it. Consider pre-filtering the file to 2 to 8 letters. Also, wildcard lookups scan every word of that length on each step. Likely fine, but add a performance test (section 5) and an index if it is slow. |
+| Word list size and speed | Medium | ENABLE is 173,528 words (1.7 MB download), about 80,600 after filtering to 3 to 8 letters. Loading and parsing on a phone should be fast, but measure it. Consider pre-filtering the file to 3 to 8 letters at build time. Also, wildcard lookups scan every word of that length on each step. Likely fine, but add a performance test (section 5) and an index if it is slow. |
 | Dictionary max length 8 while columns are 10 tall | Low | A vertical run of 9 or 10 valid letters cannot exist in the list, so it never scores. This is probably fine, but it should be a conscious decision. |
 | Google Fonts loaded from the internet | Medium | Fails offline and inside a future Android app. Self-host the two Chakra Petch weights (licence is open) in M6. |
 | Bundle size | Low | The built JavaScript is about 1.4 MB (Phaser). Fine for now. Revisit before the itch.io and portal releases. |
@@ -209,27 +223,22 @@ You asked to rely on Vitest rather than the browser. That works well for core, a
    - Fake browser storage: use `vi.stubGlobal('localStorage', ...)` instead of adding `jsdom`.
    - Random testing: use core's own seeded `createRng`, not a library.
 
-### 5.2 What exists (40 tests)
+### 5.2 What exists (144 tests, 11 files)
 
-Covered: dictionary basics and wildcard lookup, closed and open words, vertical words, MAYBE versus MAYBEJ, premium multiplication, wildcard worth zero, filler and shovel costs, rng determinism, daily seeds, creating a game, moving, falling, landing, one-way switching, wildcard refund, peek, freeze, shovel, previews, game over, immutability of `step`.
+See section 2.6 for the file-by-file list. Done in M0: `board`, `pieces`, `config`, `replay` and `invariants` tests, the architecture guards, the extra scoring and words tests, and the word list test.
 
-### 5.3 Core test backlog
+### 5.3 Core test backlog (what is still open)
 
-| Test file | Tests to write |
+| Test file | Tests still to write |
 | --- | --- |
-| `board.test.ts` (new, the plan wants one per module) | Grid is 8x10 and empty. Premium squares: exactly five x2 and three x3, all on distinct cells, same seed gives same layout. `collapseColumn` keeps order and leaves no gaps. `spawnColumn` prefers the centre, skips blocked cells, returns null when the top row is full. `nearestFreeColumn` picks the closer side. `countFillers`. `inBounds` at all four edges. |
-| `pieces.test.ts` (new) | Queues refill to `QUEUE_LENGTH`. Switching away returns the letter to the front of its queue (no letters burned). `buttonPreview` for a vowel piece, a consonant piece, a filler piece, a wildcard piece and no piece. |
-| `config.test.ts` (new) | `fallIntervalMs` never increases as pieces are placed and never goes below 250. Letter values exist for every A to Z and `?` is 0. Both letter bags contain only letters of the right kind and every letter of each kind can appear. Premium counts fit the board. |
-| `scoring.test.ts` (add) | One letter shared by an across word and a down word scores in both. Two words in one row separated by a filler both score. A wildcard in a vertical word. x2 and x3 together give x6. A word broken by a later piece stops scoring (score goes down). Open words are listed with 0 points. Run of 9 or 10 letters is never a word. Behaviour with `MIN_WORD_LENGTH` = 3 (use `vi.mock` on the config) so the switch is safe. |
-| `game.test.ts` (add) | A new piece spawns at the nearest free column when the centre is blocked. Shovel under the falling piece moves the piece to a free column. Using the shovel on a filler removes it and costs 5. Freeze followed by a landing. Wildcard used twice refunds correctly. Invalid actions return an unchanged state for every action type. Actions after game over return the same object. |
-| `replay.test.ts` (new) | Same seed plus same action list always gives an identical final state (this is what future score verification relies on). A stored "golden" game: seed, action list, expected final score and board. Replaying from a JSON-saved state works. |
-| `invariants.test.ts` (new) | Random games: for many seeds, apply a few hundred random actions with core's rng. Check after every step: nothing throws, no tile floats above an empty cell, number of tiles equals pieces placed minus shovel uses, charges never go negative, score is a finite number, piece is never inside an occupied cell. |
-| `rng.test.ts` (add) | `pickChar` frequencies roughly follow the bag. Seeds 0, negative and very large work. Generator state is plain JSON. |
-| `words.test.ts` (add) | CRLF and blank lines in a word list. `minLength` and `maxLength` options. More than one `?` in a pattern. A speed test with about 170,000 synthetic words (wildcard lookup should stay well under a few milliseconds). |
+| `scoring.test.ts` | A wildcard inside a vertical word. A run of 9 or 10 letters is never a word (dictionary maximum is 8). |
+| `game.test.ts` | A new piece spawns at the nearest free column when the centre is blocked. Shovel under the falling piece moves the piece to a free column. Using the shovel on a filler removes it and costs 5. Freeze followed by a landing. Wildcard used twice refunds correctly. Invalid actions return an unchanged state for every action type. Actions after game over return the same object. (The random-play invariants already cover much of this indirectly.) |
+| `rng.test.ts` | `pickChar` frequencies roughly follow the bag. Seeds 0, negative and very large work. Generator state is plain JSON. |
+| `words.test.ts` | A speed test with about 170,000 synthetic words (wildcard lookup should stay well under a few milliseconds). |
 
-### 5.4 Word list test (after M1)
+### 5.4 Word list tests
 
-`wordlist.test.ts`: if `public/words/enable.txt` exists, load it with `?raw` and check: it has between 100,000 and 200,000 lines, only letters, contains known words (CAT, QUIZ, MAYBE), does not contain the blocklist words (if you choose a blocklist), and after filtering to 2 to 8 letters has the expected count. Skip when the file is absent so a fresh clone still passes.
+Done in `src/game/wordlists.test.ts`: all three files have the expected word counts, `enable.txt` and `freq-word.txt` are plain a-z, the dictionary built from `enable.txt` knows ordinary words, rejects non-words and 2-letter words, drops words over 8 letters, answers wildcard questions and has a sensible size, and a missing or HTML file gives an empty dictionary. A blocklist test is only needed if a blocklist is added (planned after M8).
 
 ### 5.5 Screen-logic tests (need the M2 refactor first)
 
@@ -241,18 +250,12 @@ Extract these from `Play.ts`, `Buttons.ts` and `theme.ts` into `src/game/logic/`
 | `controls.ts` | `controlStates(state, shovelArmed)` returns the label, selected and disabled state for each of the ten buttons. | Left-behind type is disabled. Wildcard disabled with no charges or on a filler. Peek and Freeze show as active. Peek shows the extra letter. Shovel shows as selected when armed. No piece disables everything. |
 | `session.ts` | A `PlaySession` class holding the state, evaluation, `paused`, `shovelArmed`, `restartArmed`, `ending` and the gravity timer. Methods: `act`, `frame(deltaMs)`, `togglePause`, `toggleShovel`, `tapCell`, `restart`. Takes the dictionary, a storage object and a seed as inputs. | Gravity ticks at the right interval and speeds up. Paused and shovel-armed games send no ticks. Any button resumes and also performs its action. Pause pressed while shovel armed only cancels the shovel. Tapping an empty cell keeps the shovel armed. Restart needs two presses inside 2 seconds. Switching or landing resets the gravity timer. Game over saves a new best score and not a lower one. Full game over with a fake storage. |
 | (existing) `theme.ts` | `cellCenter`, `cellAtPoint`, layout numbers. | `cellAtPoint(cellCenter(r, c))` returns `(r, c)` for every cell. A point in a gap or outside the board returns null. Every button row is at least 44 px tall and wide. The layout fits inside 640 px with no overlap. |
-| `storage` | `load` and `save`. | Missing key gives defaults. Corrupted JSON gives defaults. Older saves missing a field get defaults for it. `load` returns a fresh object each call. |
-| `dictionary.ts` | `buildDictionary`. | Empty text gives an empty dictionary. HTML text (what a dev server returns for a missing file) gives an empty dictionary. Real lines are kept. |
+| `storage` | `load` and `save`. | Missing key gives defaults. Corrupted JSON gives defaults. Older saves missing a field get defaults for it. `load` returns a fresh object each call. (Needs `vi.stubGlobal('localStorage', ...)`; can be written before M2 since `storage` does not depend on Phaser.) |
+| `dictionary.ts` | `buildDictionary`. | Covered in M0 by `wordlists.test.ts` (empty text, HTML text, real list). |
 
-### 5.6 Architecture guard tests
+### 5.6 Architecture guard tests (done in M0)
 
-These turn the rules file into tests, so Cursor or a future you cannot quietly break them. Use `import.meta.glob(..., { query: '?raw' })`.
-
-- Nothing in `src/core` imports `phaser` or mentions `window`, `document`, `localStorage`, `Math.random` or `Date.now`.
-- No hex color (`#rrggbb` or `0xrrggbb`) appears outside `src/ui/theme.ts` (the `NightGrid.dc.html` file is a design reference and is excluded).
-- `src/game` and `src/ui` import no scoring or word logic beyond calling core functions (hard to test exactly; a simple check that they do not define their own letter values is enough).
-- Only `src/storage` touches `localStorage`.
-- No file uses `any`.
+`src/architecture.test.ts` turns the rules file into tests, so Cursor or a future you cannot quietly break them. It checks that core imports no Phaser or browser APIs and uses no `Math.random`, `Date.now` or `new Date`; that hex colours appear only in `src/ui/theme.ts`; that only `src/storage` touches `localStorage`; and that no file uses `any`. It was proven not to be vacuous by adding a deliberate violation and watching it fail. Still open: a check that `src/game` and `src/ui` do not define their own letter values or scoring (hard to test exactly).
 
 ### 5.7 What stays manual
 
@@ -268,35 +271,36 @@ Each milestone ends with something you can run and check. "Code" is work I do in
 
 **Goal:** the repo matches its own rules and the next steps have a safe base.
 
-- **Code**
-  - Add `"strict": true` to `tsconfig.json` (already verified to compile).
-  - Move the plan to `docs/GDD.md`, or copy it, and fix the link at the top of this file.
-  - Write the project `README.md`.
-  - Add a placeholder favicon so the console is clean.
-  - Add `.github/workflows/ci.yml`: on every push, run `npm ci`, `npm test`, `npm run build`.
-  - Set `base: './'` in `vite.config.ts` so the build works from any folder (needed for itch.io and Capacitor later).
-  - Add the audio unlock events for iOS (`touchend`, `click`).
-  - Write the missing core test files that do not depend on decisions: `board.test.ts`, `pieces.test.ts`, `config.test.ts`, `replay.test.ts`, `invariants.test.ts`, and the architecture guard tests.
+**Status: code done (25 November 2026). Waiting on your first push to prove CI is green.**
+
+- **Code (all done)**
+  - [x] `"strict": true` in `tsconfig.json`.
+  - [x] Plan moved to `docs/GDD.md`.
+  - [x] `README.md` and `CREDITS.md` written.
+  - [x] Placeholder favicon.
+  - [x] `.github/workflows/ci.yml`: on every push to `main` and every pull request, run `npm ci`, `npm test`, `npm run build`.
+  - [x] `base: './'` in `vite.config.ts` (checked: `dist/index.html` uses `./assets/...`).
+  - [x] Audio unlock events for iOS (`touchend`, `click`).
+  - [x] `MIN_WORD_LENGTH` is 3, test first.
+  - [x] Core tests: `board`, `pieces`, `config`, `replay`, `invariants`, plus the architecture guard tests and the word list test.
 - **You**
-  - Decide where the GDD lives (section 7).
-  - Decide on minimum word length (section 7). If 3, I do it test-first here.
-  - Make sure GitHub Actions is enabled on the repo.
-- **Done when:** `npm test` and `npm run build` pass in CI on GitHub, and the rules file and the code agree.
+  - [x] GDD location, minimum word length: decided.
+  - [ ] Commit and push, and check the **Actions** tab on GitHub shows a green run (see "Continuous integration" in `README.md`).
+  - [x] Unused word lists moved to `data/wordlists/`.
+- **Done when:** `npm test` and `npm run build` pass in CI on GitHub, and the rules file and the code agree. Locally both pass.
 
 ### M1: Real words (the game becomes playable)
 
 **Goal:** closed words actually score, so you can judge the core game.
 
 - **You**
-  1. Download the ENABLE word list from a trusted source and read its licence note (ENABLE is widely described as public domain, but check what the copy you download says).
-  2. Put it at `public/words/enable.txt`.
-  3. Decide the slang and offensive-word policy (section 7).
-  4. Play ten games on the laptop and note what feels wrong.
+  1. [x] ENABLE downloaded and placed at `public/words/enable.txt` (checked identical to upstream; licence in `CREDITS.md`).
+  2. [x] Slang and offensive words: no blocklist for now (single-player). Moved to the end of the roadmap (after M8).
+  3. [x] Unused lists moved out of `public/` to `data/wordlists/`.
+  4. [ ] Play ten games on the laptop and note what feels wrong.
 - **Code**
-  - Optional build step or script that filters the file to 2 to 8 letters, so the phone downloads less. I would only add a Node script, with no new dependency.
-  - A blocklist file and loader, if you want one.
-  - `wordlist.test.ts` (section 5.4) and the speed test.
-  - A credits file listing ENABLE and Chakra Petch.
+  - Optional build step or script that filters the file to 3 to 8 letters, so the phone downloads less (about 1.7 MB today). I would only add a Node script, with no new dependency.
+  - The word list tests and the credits file are already done (M0). The speed test is still open (section 5.3).
   - Show a visible message in the game (not only the console) if the word list fails to load.
   - Investigate the unexplained instant Game Over from section 4.3.
 - **Done when:** words turn yellow, then green when closed, the score changes, and the wordlist tests pass.
@@ -394,11 +398,13 @@ Each milestone ends with something you can run and check. "Code" is work I do in
 ### M8: After the MVP (not scheduled)
 
 - **Leaderboards:** start with the Daily board. Needs a small backend (Supabase or Firebase).
+- **Different board sizes** can select from the menu.
 - **Score verification:** the player submits the seed and the action list, and a server function replays it through `step`. The replay tests from section 5.3 are the foundation for this.
 - **Async duel**, then only if people keep playing: live race and attack mode.
 - **iPhone app:** Capacitor, Apple Developer Program, a macOS build (cloud service if you have no Mac).
 - **Monetisation:** decide ads, remove-ads purchase or cosmetics only after you see how people play.
 - **Limited pool mode** and other modes from the GDD.
+- **Slang and offensive-word blocklist** (decided: not now, since the game is single-player). A blocklist file plus loader, with a test, if you later want it, for example before leaderboards or sharing.
 
 ### Suggested order and rough size
 
@@ -410,9 +416,10 @@ M0 and M1 are one or two sessions each. M2 is one or two sessions. M3 depends on
 
 | # | Question | Needed by |
 | --- | --- | --- |
-| 1 | **Minimum word length:** 2 (code today) or 3 (GDD decision note)? | M0 |
-| 2 | Where does the GDD live: move the root file to `docs/GDD.md`? | M0 |
-| 3 | Word list: will you download ENABLE, or should I fetch it? Slang and offensive-word policy, and do you want a blocklist? | M1 |
+| 1 | ~~Minimum word length~~ **Decided: 3.** | done |
+| 2 | ~~Where the GDD lives~~ **Decided: `docs/GDD.md`.** | done |
+| 3 | ~~Word lists~~ **Decided:** no blocklist for now (single-player; revisit after M8). Unused lists moved to `data/wordlists/`. | done |
+| 12 | Project licence for your own code (MIT, all rights reserved, other)? Not needed to play, but needed before the repository is made public. | before M6 |
 | 4 | Should the board stay visible while paused (current), or be hidden to prevent planning during a pause? | M2 |
 | 5 | Shovel: allow it below 5 points (current), or lock it until you have enough? Should tiles above fall (current) or leave a gap? | M3 |
 | 6 | Is Night Grid the final palette? Do you want a light variant derived from it? | M5 |
@@ -431,17 +438,20 @@ M0 and M1 are one or two sessions each. M2 is one or two sessions. M3 depends on
 ```
 word-drop/
   .cursor/rules/word-drop.mdc        project rules (done)
-  .github/workflows/                 (missing; ci.yml in M0, Android in M7)
+  .github/workflows/ci.yml           tests + build on push (done; Android workflow in M7)
   docs/
-    GDD.md                           stub, to be populated (M0)
+    GDD.md                           the full design and build plan (done)
     PROJECT_STATUS_AND_ROADMAP.md    this file
   public/
-    words/enable.txt                 MISSING (M1)
+    favicon.svg                      placeholder (real icon in M6)
+    words/enable.txt                 the dictionary the game loads (done)
+  data/wordlists/                    eowl.txt, freq-word.txt: spare lists, NOT shipped (done)
     sounds/, fonts/                  not needed yet / M6
   src/
-    core/                            rules, 7 modules + 4 test files (done)
+    architecture.test.ts             the rules file as tests (done)
+    core/                            rules, 7 modules + 9 test files (done)
     game/
-      main.ts, dictionary.ts         done
+      main.ts, dictionary.ts         done (wordlists.test.ts checks the real files)
       scenes/ Boot, Play, GameOver   done;  Menu = empty placeholder
       views/  BoardView, TileView, Buttons, HUD, text   done
       logic/                         (new in M2: events, controls, session)
@@ -452,10 +462,10 @@ word-drop/
     storage/index.ts                 done (best score only)
     main.ts                          done
   index.html                         done (loads Google Font; self-host in M6)
-  vite.config.ts                     empty config (base './' in M0)
-  tsconfig.json                      add strict (M0)
+  vite.config.ts                     base './' (done)
+  tsconfig.json                      strict on (done)
   package.json
-  Word Drop Game Design and Build Plan.md   the GDD (move to docs/, M0)
+  README.md, CREDITS.md              done (CREDITS finished for word lists; fonts in M6)
 ```
 
 ### 8.2 Commands

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Placeholder icon in the Night Grid palette (see src/ui/theme.ts): a raised tile with a W.
+       Replace with the real app icon in milestone M6. -->
+  <rect width="64" height="64" rx="12" fill="#0E1320"/>
+  <rect x="9" y="11" width="46" height="46" rx="6" fill="#0A0F1A"/>
+  <rect x="9" y="8" width="46" height="46" rx="6" fill="#1D2535" stroke="#2EE6D6" stroke-width="3"/>
+  <path d="M18 19 L25 43 L32 28 L39 43 L46 19" fill="none" stroke="#E9EEF8" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

@@ -1,3 +1,5 @@
+import { MIN_WORD_LENGTH } from './config';
+
 export interface Dictionary {
   readonly size: number;
   /** Exact word check, case-insensitive. */
@@ -17,7 +19,8 @@ export function parseWordList(text: string): string[] {
 }
 
 export function createDictionary(words: Iterable<string>, options: DictionaryOptions = {}): Dictionary {
-  const minLength = options.minLength ?? 2;
+  // Default to the game's rule so the dictionary and scoring can never disagree.
+  const minLength = options.minLength ?? MIN_WORD_LENGTH;
   const maxLength = options.maxLength ?? 8;
   const all = new Set<string>();
   const byLength = new Map<number, string[]>();

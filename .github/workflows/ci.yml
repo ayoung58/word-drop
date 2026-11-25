@@ -1,0 +1,39 @@
+name: CI
+
+# Runs the unit tests and the production build on every push to main and on every pull request.
+# A red check on GitHub means something is broken before it reaches your phone or a release.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: # lets you start it by hand from the Actions tab
+
+# If you push again while a run is in progress, cancel the old run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24 # the same major version as on your laptop
+          cache: npm # reuses downloaded packages between runs
+
+      # npm ci installs exactly what package-lock.json says, so CI matches your machine.
+      - run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      # Runs "tsc" (type check, strict) and then the Vite build.
+      - name: Type check and build
+        run: npm run build

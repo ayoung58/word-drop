@@ -9,7 +9,8 @@ export const WORDS_URL = `${import.meta.env.BASE_URL}words/enable.txt`;
 const MIN_EXPECTED_WORDS = 1000;
 
 /**
- * Builds the dictionary from the word list text, keeping words that fit the board (2 to 8 letters).
+ * Builds the dictionary from the word list text, keeping words that fit the board
+ * (MIN_WORD_LENGTH to 8 letters, which is also the board width).
  * If the file is missing the game still runs, but no word can score.
  */
 export function buildDictionary(text: string | undefined): Dictionary {

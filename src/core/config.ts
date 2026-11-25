@@ -3,8 +3,11 @@ import type { Charges } from './types';
 export const BOARD_W = 8;
 export const BOARD_H = 10;
 
-/** Shortest run of letters that can count as a word. */
-export const MIN_WORD_LENGTH = 2;
+/**
+ * Shortest run of letters that can count as a word. 3, so that the many two-letter words
+ * in the word list do not make scoring too easy or weaken the filler penalty (docs/GDD.md, section 6).
+ */
+export const MIN_WORD_LENGTH = 3;
 
 export const FILLER_COST = 1;
 export const SHOVEL_COST = 5;
