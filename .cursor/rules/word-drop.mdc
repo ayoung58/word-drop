@@ -21,13 +21,15 @@ Word Drop is a mobile-first falling-letter word puzzle. Pieces (vowel, consonant
 
 ## Game rules (source of truth, do not change without asking)
 - Grid is 8 columns by 10 rows. One piece falls at a time.
-- Piece types: vowel, consonant, filler, wildcard. A new piece starts as the last letter type used. Once the player switches away from a type, they cannot switch back to it for that piece. Switching restarts the drop from the top. The wildcard is a powerup; switching away from it refunds it.
+- Piece types: vowel, consonant, filler, wildcard. A new piece starts as the last type the player chose (vowel, consonant or filler; a wildcard does not count). Once the player switches away from a type, they cannot switch back to it for that piece. Switching restarts the drop from the top. The wildcard is a powerup; switching away from it refunds it.
 - A word counts only if it is a full run of letters (at least MIN_WORD_LENGTH, set in src/core/config.ts) bounded on both ends by the board edge or a filler block. Words read left to right and top to bottom.
-- Letters use Scrabble-style values. A premium square multiplies the word score (x2 or x3). Multipliers in one word multiply together.
-- A filler costs 1 point. The shovel costs 5 points, removes a tile, and the tiles above it fall.
+- Any other run of two or more adjacent letters (not a word, closed or not) is penalised by the plain points of its letters, with no premium multiplier. A single letter alone is never penalised. A letter is paid for once per bad run it sits in. The penalty follows MIN_WORD_LENGTH.
+- Letters use Scrabble-style values and are drawn with Scrabble tile frequencies (vowel and consonant pools, Y in both, no blank; all in src/core/config.ts). Points are shown on the tiles. A premium square multiplies the word score (x2 or x3). Multipliers in one word multiply together.
+- A filler costs FILLER_COST points (0 for now). The shovel costs 5 points, removes a tile, and the tiles above it fall.
 - Powerups: wildcard, peek, freeze, shovel. Pause freezes everything.
 - The game ends when no new piece can enter the board.
-- Score = closed words minus filler costs minus shovel costs. It can go down when a word is broken.
+- Pieces fall at one fixed speed (FALL_INTERVAL_MS). The game does not speed up.
+- Score = closed words minus bad-run penalties minus filler costs minus shovel costs. It can go down when a word is broken.
 
 ## How to work
 - Write or update tests first for any rule change. Run npm test before saying a task is done.

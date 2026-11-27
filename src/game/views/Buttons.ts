@@ -1,8 +1,10 @@
 import type Phaser from 'phaser';
 import { FILLER_COST, SHOVEL_COST } from '../../core/config';
 import { buttonPreview } from '../../core/pieces';
+import { fillerCaption, poolLetters, powerupCaptions } from '../logic/labels';
+import type { PoolLetter } from '../logic/labels';
 import type { Action, GameState, SwitchTarget } from '../../core/types';
-import { EDGE, GAME_W, hex, LAYOUT, PAD_X, PALETTE, RADIUS } from '../../ui/theme';
+import { EDGE, GAME_W, hex, LAYOUT, PAD_X, PALETTE, POINTS_SIZE, RADIUS } from '../../ui/theme';
 import { makeLabel } from './text';
 
 export type IconName = 'pause' | 'restart' | 'left' | 'right' | 'down';
@@ -26,11 +28,19 @@ export interface ButtonState {
   top?: string;
   /** Large text under the caption (a letter, a number). */
   bottom?: string;
+  /** Letters shown big under the caption, each with its points as a small subscript. Used instead of `bottom`. */
+  pool?: PoolLetter[];
   /** Selected: drawn with the accent border. */
   on?: boolean;
   /** Dimmed and ignores touches. */
   disabled?: boolean;
 }
+
+/** Most letters a pool button shows at once: the next one, and the one after it while peek is on. */
+const MAX_POOL_LETTERS = 2;
+/** Gap between a letter and its subscript, and around the dot between two letters. */
+const SUB_GAP = 2;
+const DOT_GAP = 7;
 
 /** A tappable button that reacts on touch-down (a falling-piece game cannot wait for the finger to lift). */
 export class Button {
@@ -38,6 +48,10 @@ export class Button {
   private readonly face: Phaser.GameObjects.Graphics;
   private readonly topText: Phaser.GameObjects.Text;
   private readonly bottomText: Phaser.GameObjects.Text;
+  /** Pre-made pieces for a pool button: a big letter and a small subscript per letter, and the dot between them. */
+  private readonly poolLetters: Phaser.GameObjects.Text[] = [];
+  private readonly poolSubs: Phaser.GameObjects.Text[] = [];
+  private readonly poolDot: Phaser.GameObjects.Text;
   private state: ButtonState = {};
   private pressed = false;
   private delayTimer: Phaser.Time.TimerEvent | null = null;
@@ -51,7 +65,12 @@ export class Button {
     this.face = scene.add.graphics();
     this.topText = makeLabel(scene, 0, 0, '', { size: o.labelSize ?? 12, weight: 600 });
     this.bottomText = makeLabel(scene, 0, 0, '', { size: 21 });
-    const parts: Phaser.GameObjects.GameObject[] = [this.face, this.topText, this.bottomText];
+    for (let i = 0; i < MAX_POOL_LETTERS; i++) {
+      this.poolLetters.push(makeLabel(scene, 0, 0, '', { size: 21 }).setOrigin(0, 0.5));
+      this.poolSubs.push(makeLabel(scene, 0, 0, '', { size: POINTS_SIZE.button, weight: 600 }).setOrigin(0, 0.5).setAlpha(0.75));
+    }
+    this.poolDot = makeLabel(scene, 0, 0, '\u00b7', { size: 21 }).setOrigin(0, 0.5);
+    const parts: Phaser.GameObjects.GameObject[] = [this.face, this.topText, this.bottomText, ...this.poolLetters, ...this.poolSubs, this.poolDot];
     if (o.icon) parts.push(this.makeIcon(o.icon));
     this.root = scene.add.container(o.x + o.w / 2, o.y + o.h / 2, parts);
     this.root.setSize(o.w, o.h).setInteractive({ useHandCursor: true });
@@ -102,11 +121,40 @@ export class Button {
     this.face.lineStyle(width, hex(this.state.on ? PALETTE.accent : PALETTE.line));
     this.face.strokeRoundedRect(-w / 2 + width / 2, -h / 2 + drop + width / 2, w - width, h - width, RADIUS);
 
-    const { top, bottom } = this.state;
-    const twoLines = top !== undefined && bottom !== undefined;
+    const { top, bottom, pool } = this.state;
+    const twoLines = top !== undefined && (bottom !== undefined || pool !== undefined);
     this.topText.setText(top ?? '').setY((twoLines ? -h / 2 + 14 : 0) + drop);
-    this.bottomText.setText(bottom ?? '').setY(h / 2 - 17 + drop);
+    this.bottomText.setText(pool ? '' : (bottom ?? '')).setY(h / 2 - 17 + drop);
+    this.layoutPool(pool ?? [], h / 2 - 17 + drop);
     this.root.setAlpha(this.state.disabled ? 0.4 : 1);
+  }
+
+  /** Lays out "E1 · A1" centred on the button: big letters, small points beside each, a dot between. */
+  private layoutPool(pool: PoolLetter[], y: number): void {
+    const shown = pool.slice(0, MAX_POOL_LETTERS);
+    const widths = shown.map((p, i) => {
+      this.poolLetters[i]?.setText(p.letter);
+      this.poolSubs[i]?.setText(String(p.points));
+      return (this.poolLetters[i]?.width ?? 0) + SUB_GAP + (this.poolSubs[i]?.width ?? 0);
+    });
+    const total = widths.reduce((n, w) => n + w, 0) + (shown.length > 1 ? DOT_GAP * 2 + this.poolDot.width : 0);
+    let x = -total / 2;
+    for (let i = 0; i < MAX_POOL_LETTERS; i++) {
+      const letter = this.poolLetters[i];
+      const sub = this.poolSubs[i];
+      const used = i < shown.length;
+      letter?.setVisible(used);
+      sub?.setVisible(used);
+      if (!used || !letter || !sub) continue;
+      letter.setPosition(x, y);
+      sub.setPosition(x + letter.width + SUB_GAP, y + 6); // lower than the letter, like a subscript
+      x += (widths[i] ?? 0) + DOT_GAP;
+      if (i === 0 && shown.length > 1) {
+        this.poolDot.setPosition(x, y);
+        x += this.poolDot.width + DOT_GAP;
+      }
+    }
+    this.poolDot.setVisible(shown.length > 1).setY(y);
   }
 
   /** Icons are stroked paths, like the SVG icons in the mockup. */
@@ -208,18 +256,18 @@ export class ControlPanel {
     const preview = buttonPreview(state);
     // While peek is on, each pool also shows the letter after the next one.
     const peeking = state.peekDropsLeft > 0;
-    const pool = (type: 'vowel' | 'consonant'): string => (peeking ? `${preview[type].now} \u00b7 ${preview[type].then}` : preview[type].now);
+    const captions = powerupCaptions(state.charges);
     const left = (to: SwitchTarget): boolean => piece === null || piece.left.includes(to);
 
-    this.vowel.update({ top: 'Vowel', bottom: pool('vowel'), on: piece?.kind === 'vowel', disabled: left('vowel') });
-    this.consonant.update({ top: 'Consonant', bottom: pool('consonant'), on: piece?.kind === 'consonant', disabled: left('consonant') });
-    this.filler.update({ top: 'Filler', bottom: `\u2212${FILLER_COST}`, on: piece?.kind === 'filler', disabled: left('filler') });
+    this.vowel.update({ top: 'Vowel', pool: poolLetters(preview.vowel, peeking), on: piece?.kind === 'vowel', disabled: left('vowel') });
+    this.consonant.update({ top: 'Consonant', pool: poolLetters(preview.consonant, peeking), on: piece?.kind === 'consonant', disabled: left('consonant') });
+    this.filler.update({ top: 'Filler', bottom: fillerCaption(FILLER_COST), on: piece?.kind === 'filler', disabled: left('filler') });
 
     const isWild = piece?.kind === 'wildcard';
     const canWild = piece !== null && (piece.kind === 'vowel' || piece.kind === 'consonant') && state.charges.wildcard > 0;
-    this.wildcard.update({ top: `Wildcard ${state.charges.wildcard}`, bottom: undefined, on: isWild, disabled: !isWild && !canWild });
-    this.peek.update({ top: `Peek ${state.charges.peek}`, bottom: undefined, on: peeking, disabled: state.charges.peek < 1 });
-    this.freeze.update({ top: `Freeze ${state.charges.freeze}`, bottom: undefined, on: state.freezeTicksLeft > 0, disabled: state.charges.freeze < 1 });
+    this.wildcard.update({ top: captions.wildcard, bottom: undefined, on: isWild, disabled: !isWild && !canWild });
+    this.peek.update({ top: captions.peek, bottom: undefined, on: peeking, disabled: state.charges.peek < 1 });
+    this.freeze.update({ top: captions.freeze, bottom: undefined, on: state.freezeTicksLeft > 0, disabled: state.charges.freeze < 1 });
     this.shovel.update({ top: `Shovel \u2212${SHOVEL_COST}`, bottom: undefined, on: shovelArmed, disabled: false });
   }
 }

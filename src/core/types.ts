@@ -32,7 +32,8 @@ export interface GameState {
   piece: Piece | null;
   vowelQueue: string[];
   consonantQueue: string[];
-  lastLetterType: LetterType;
+  /** The type the player last chose (vowel, consonant or filler). The next piece starts as this. A wildcard does not count. */
+  lastType: SwitchTarget;
   placed: number;
   /** Points spent on the shovel. */
   spent: number;
@@ -64,10 +65,26 @@ export interface WordHit {
   points: number;
 }
 
+/** Two or more letters in a row (across or down) that do not form a word. They cost the points of their letters. */
+export interface BadRun {
+  text: string;
+  cells: [number, number][];
+  direction: 'across' | 'down';
+  /** Plain letter points, with no premium multiplier. A wildcard is 0. */
+  penalty: number;
+}
+
 export interface Evaluation {
   words: WordHit[];
+  badRuns: BadRun[];
   wordPoints: number;
+  /** Total of every bad run's penalty. */
+  penaltyPoints: number;
   fillerCount: number;
-  /** wordPoints minus filler costs minus shovel costs. */
+  /** What is on the board: wordPoints minus penaltyPoints minus filler costs. Shown as the main score. */
+  boardScore: number;
+  /** Total shovel costs so far. Shown apart from the main score. */
+  shovelPenalty: number;
+  /** boardScore minus shovelPenalty. The game's real score. */
   score: number;
 }

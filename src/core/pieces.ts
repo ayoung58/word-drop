@@ -19,10 +19,12 @@ export function setPieceKind(s: GameState, piece: Piece, kind: PieceKind): void 
   }
   piece.kind = kind;
   piece.letter = null;
+  // The next piece starts as the last type the player chose, filler included. The wildcard is
+  // left out: it is a one-off powerup, so the piece after it goes back to vowel or consonant.
+  if (kind !== 'wildcard') s.lastType = kind;
   if (kind === 'vowel' || kind === 'consonant') {
     const queue = kind === 'vowel' ? s.vowelQueue : s.consonantQueue;
     piece.letter = queue.shift() ?? null;
-    s.lastLetterType = kind;
     refillQueues(s);
   } else if (kind === 'wildcard') {
     piece.letter = '?';

@@ -1,20 +1,20 @@
 # Word Drop core
 
 The game rules as pure TypeScript. No Phaser, no DOM, no browser storage, no Math.random, no Date.now.
-Unzip at the repo root so the files land in `src/core/`. Tests use Vitest (`npm test`).
+Tests use Vitest (`npm test`).
 
 ## Use
 
 ```ts
-import { createGame, step, evaluate, createDictionary, parseWordList, buttonPreview, dailySeed, fallIntervalMs } from './core';
+import { createGame, step, evaluate, createDictionary, parseWordList, buttonPreview, dailySeed, FALL_INTERVAL_MS } from './core';
 
 const dict = createDictionary(parseWordList(wordListText)); // ENABLE, loaded by the view
 let state = createGame(dailySeed('2026-11-24'));            // or any number for a Classic game
 
 state = step(state, { type: 'moveLeft' });                  // every change goes through step()
-state = step(state, { type: 'tick' });                      // the view sends one every fallIntervalMs(state.placed)
+state = step(state, { type: 'tick' });                      // the view sends one every FALL_INTERVAL_MS (fixed)
 
-const { words, score } = evaluate(state, dict);             // words: closed (scored) and open (valid, not closed yet)
+const { words, badRuns, score } = evaluate(state, dict);      // words: closed (scored) and open; badRuns: letters side by side that are not a word (penalised)
 const buttons = buttonPreview(state);                       // letters for the Vowel and Consonant buttons
 ```
 
@@ -26,9 +26,9 @@ const buttons = buttonPreview(state);                       // letters for the V
 
 ## Rules in code
 
-- `config.ts`: board size, `MIN_WORD_LENGTH`, costs, letter values, letter bags, powerup counts.
-- `pieces.ts`: one-way switching, letters returned to their queue, button previews.
-- `scoring.ts`: whole-run words, closed by edge or filler, across and down, premium multipliers, wildcards.
+- `config.ts`: board size, `MIN_WORD_LENGTH`, costs (`FILLER_COST` is 0 for now), `FALL_INTERVAL_MS`, the Scrabble `TILE_SET` (points and copies), the vowel and consonant bags derived from it, powerup counts.
+- `pieces.ts`: one-way switching, letters returned to their queue, button previews. The next piece starts as the last type chosen (filler included, wildcard excluded).
+- `scoring.ts`: whole-run words, closed by edge or filler, across and down, premium multipliers, wildcards. Any other run of 2 or more letters is a bad run and costs the plain points of its letters. `evaluate` takes an optional `minLength` to try other minimum lengths.
 - `game.ts`: spawning, falling, locking, powerups, game over.
 
 ## Differences from the HTML prototype

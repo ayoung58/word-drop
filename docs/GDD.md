@@ -16,14 +16,26 @@ Word Drop is a falling-letter puzzle where you build a crossword as you play. Ea
 ## 3. Core rules
 
 - **Grid:** 8 columns by 10 rows. One piece falls at a time. Move it left or right, or drop it faster.
-- **Piece type:** each new piece starts as the last letter type you used (vowel or consonant). You can switch type, but once you leave a type you cannot return to it for that piece. Switching restarts the drop from the top. After a piece lands, all types are available again for the next one.
-- **Fillers:** black blocks that act as walls, like the black squares in a crossword. Each costs 1 point.
+- **Piece type:** each new piece starts as the last type you chose (vowel, consonant or filler). Filler stays selected after it lands, the same way vowel and consonant do, until you switch. A wildcard does not count as a choice: the piece after it goes back to the previous type. You can switch type, but once you leave a type you cannot return to it for that piece. Switching restarts the drop from the top. After a piece lands, all types are available again for the next one.
+- **Fillers:** black blocks that act as walls, like the black squares in a crossword. A filler costs nothing for now. The cost is a setting (`FILLER_COST`; it was 1 before the first ten playtest games).
 - **Words:** a word counts only if it is a full run of letters bounded at both ends by the board edge or a filler block. MAYBE followed by a wall counts; MAYBEJ does not.
 - **Directions:** words read left to right and top to bottom. Both count.
-- **Length:** words need at least 2 letters for now. This is a setting, and 3 may feel better.
-- **Scoring:** letters have Scrabble-style values. A premium square (x2 or x3) multiplies the score of any word that covers it, and several premiums in one word multiply together.
-- **Feedback:** green means a scored word; yellow means a valid word that is not closed off yet.
-- **End of game:** the game ends when no piece can enter the board. The final score is the sum of closed words minus filler and shovel costs.
+- **Length:** words need at least 3 letters. This is a setting (`MIN_WORD_LENGTH`). Changing it changes both what scores and what is penalised, see the next item.
+- **Letters that are not a word:** two or more letters in a row (across or down) that do not form a word cost the plain points of their letters, whether or not the run is closed off. A single letter on its own costs nothing. A valid word that is not closed yet neither scores nor costs. Premium squares multiply words only, never penalties. A letter that is in a bad run across and a bad run down is paid for twice. Example (`.` is a filler):
+
+  ```text
+  GEAR.
+  MAYBE
+  BEE..
+  ```
+
+  Across, GEAR, MAYBE and BEE score. Down, GMB, EAE and RB cost their letters, AYE scores, and the lone E in column 5 is fine. With a minimum length of 2 instead, `BIT` over `OF.` scores IF and OF as words and penalises only BO.
+- **Scoring:** letters have Scrabble-style values, shown in the corner of each tile (0 for a wildcard) and as a small subscript on the next vowel and consonant. A premium square (x2 or x3) multiplies the score of any word that covers it, and several premiums in one word multiply together.
+- **Shovel total:** the main score shows only what is on the board. The shovel total is shown beside it in small text, for example `(shovel penalty: -5)` after one use, and is hidden until the shovel is used. The final score still takes it off.
+- **Premium squares on the board:** a letter on an x2 or x3 square takes that square's color as its fill, whether the letter is scored, pending or wrong. The word state still shows in the border (green for scored, red for a penalty). A wrong letter never gets the multiplier. yellow means a valid word that is not closed off yet; a red border marks letters in a run that is not a word and is costing points.
+- **End of game:** the game ends when no piece can enter the board. The final score is the sum of closed words, minus the letters of runs that are not words, minus filler and shovel costs.
+- **Letter frequency:** letters are drawn with the Scrabble tile frequencies: one pool for vowels (E is 12 chances in 43) and one for consonants (55 chances). Y is in both pools, one chance each. The Scrabble blank is not drawn, because the Wildcard powerup is the blank.
+- **Speed:** pieces fall at one fixed speed (700 ms per row). The game does not speed up.
 - **Pause:** a pause button freezes everything, and any other button resumes the game. Arming the shovel also pauses the game.
 
 ## 4. Powerups
@@ -45,11 +57,12 @@ Word Drop is a falling-letter puzzle where you build a crossword as you play. Ea
 
 A playable build answers these faster than discussion does.
 
-- Minimum word length: 2 or 3? A 2-letter minimum makes scoring easy and weakens the filler penalty.
-- Filler cost and supply: is -1 enough, and should fillers also be limited?
+- Minimum word length: decided as 3, because a 2-letter minimum makes scoring easy. Revisit after phone playtests; the penalty rule follows whatever is set.
+- Filler cost and supply: the cost is 0 for now (playtest feedback). Does the game still have tension, and should fillers be limited instead?
+- Penalty for open runs: two letters side by side cost points immediately, even if a third letter would make a word. Is that too harsh while building a word?
 - Shovel: should it be locked until you have enough points, and should tiles above it fall or leave a gap?
 - Vertical words need a filler above the stack to close, because stacks grow upward. Is that intuitive, or does the game need a hint?
-- Pacing: how fast should gravity ramp up, and does an 80-cell board take too long to fill?
+- Pacing: gravity no longer ramps up (decided after the first ten games). Is 700 ms right, and does an 80-cell board take too long to fill?
 - Powerups: a starting allowance, found on the board, or earned with score?
 - Premium squares: random each game, or fixed layouts that enable strategy and a daily puzzle?
 - Word strictness: how obscure may a valid word be, and which slang is allowed?
@@ -234,13 +247,15 @@ Word Drop is a mobile-first falling-letter word puzzle. Pieces (vowel, consonant
 
 ## Game rules (source of truth, do not change without asking)
 - Grid is 8 columns by 10 rows. One piece falls at a time.
-- Piece types: vowel, consonant, filler, wildcard. A new piece starts as the last letter type used. Once the player switches away from a type, they cannot switch back to it for that piece. Switching restarts the drop from the top. The wildcard is a powerup; switching away from it refunds it.
+- Piece types: vowel, consonant, filler, wildcard. A new piece starts as the last type the player chose (vowel, consonant or filler; a wildcard does not count). Once the player switches away from a type, they cannot switch back to it for that piece. Switching restarts the drop from the top. The wildcard is a powerup; switching away from it refunds it.
 - A word counts only if it is a full run of letters (at least MIN_WORD_LENGTH, set in src/core/config.ts) bounded on both ends by the board edge or a filler block. Words read left to right and top to bottom.
-- Letters use Scrabble-style values. A premium square multiplies the word score (x2 or x3). Multipliers in one word multiply together.
-- A filler costs 1 point. The shovel costs 5 points, removes a tile, and the tiles above it fall.
+- Any other run of two or more adjacent letters (not a word, closed or not) is penalised by the plain points of its letters, with no premium multiplier. A single letter alone is never penalised. A letter is paid for once per bad run it sits in. The penalty follows MIN_WORD_LENGTH.
+- Letters use Scrabble-style values and are drawn with Scrabble tile frequencies (vowel and consonant pools, Y in both, no blank; all in src/core/config.ts). Points are shown on the tiles. A premium square multiplies the word score (x2 or x3). Multipliers in one word multiply together.
+- A filler costs FILLER_COST points (0 for now). The shovel costs 5 points, removes a tile, and the tiles above it fall.
 - Powerups: wildcard, peek, freeze, shovel. Pause freezes everything.
 - The game ends when no new piece can enter the board.
-- Score = closed words minus filler costs minus shovel costs. It can go down when a word is broken.
+- Pieces fall at one fixed speed (FALL_INTERVAL_MS). The game does not speed up.
+- Score = closed words minus bad-run penalties minus filler costs minus shovel costs. It can go down when a word is broken.
 
 ## How to work
 - Write or update tests first for any rule change. Run npm test before saying a task is done.

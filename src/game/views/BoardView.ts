@@ -1,11 +1,10 @@
 import type Phaser from 'phaser';
 import { BOARD_H, BOARD_W } from '../../core/config';
-import type { GameState, WordHit } from '../../core/types';
+import type { BadRun, GameState, WordHit } from '../../core/types';
 import { BOARD_PX_H, BOARD_PX_W, cellAtPoint, cellCenter, LAYOUT } from '../../ui/theme';
+import { badCells, markWords } from '../logic/labels';
 import { TileView } from './TileView';
 import type { TileLook } from './TileView';
-
-type WordMark = 'scored' | 'open';
 
 /** Draws the grid and the falling piece from a GameState, and plays the tile animations. */
 export class BoardView {
@@ -41,17 +40,19 @@ export class BoardView {
 
   /**
    * Draws the state. `words` colors the letters: green for scored words, yellow for valid words
-   * that are not closed yet. `targeting` outlines every tile while the shovel is armed.
+   * that are not closed yet. `badRuns` gives the letters that cost points a red border.
+   * `targeting` outlines every tile while the shovel is armed.
    */
-  render(state: GameState, words: readonly WordHit[], targeting: boolean): void {
-    const marks = this.markWords(words);
+  render(state: GameState, words: readonly WordHit[], badRuns: readonly BadRun[], targeting: boolean): void {
+    const marks = markWords(words);
+    const bad = badCells(badRuns);
     for (let r = 0; r < BOARD_H; r++) {
       for (let c = 0; c < BOARD_W; c++) {
         const cell = state.grid[r]?.[c] ?? null;
         let look: TileLook;
         if (cell === null) look = { kind: 'empty', premium: state.premium[r]?.[c] ?? 0 };
         else if (cell.kind === 'filler') look = { kind: 'filler', target: targeting };
-        else look = { kind: 'letter', letter: cell.letter, word: marks.get(`${r},${c}`) ?? 'none', target: targeting };
+        else look = { kind: 'letter', letter: cell.letter, word: marks.get(`${r},${c}`) ?? 'none', premium: state.premium[r]?.[c] ?? 0, bad: bad.has(`${r},${c}`), target: targeting };
         this.tiles[r]?.[c]?.setLook(look);
       }
     }
@@ -100,19 +101,6 @@ export class BoardView {
     if (oneStep) this.pieceTween = this.scene.tweens.add({ targets: root, x, y, duration: 60, ease: 'Linear' });
     else root.setPosition(x, y);
     this.lastPiece = { row: p.row, col: p.col };
-  }
-
-  private markWords(words: readonly WordHit[]): Map<string, WordMark> {
-    const marks = new Map<string, WordMark>();
-    for (const w of words) {
-      for (const [r, c] of w.cells) {
-        const key = `${r},${c}`;
-        // A letter shared by a scored word and an open word counts as scored.
-        if (w.closed) marks.set(key, 'scored');
-        else if (!marks.has(key)) marks.set(key, 'open');
-      }
-    }
-    return marks;
   }
 
   /** Scales a tile to (sx, sy) and back, from its resting size. */

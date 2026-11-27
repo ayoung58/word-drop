@@ -1,13 +1,15 @@
 import type Phaser from 'phaser';
-import { CELL, EDGE, hex, PALETTE, RADIUS } from '../../ui/theme';
+import { letterValue } from '../../core/config';
+import { tileFill } from '../logic/labels';
+import { CELL, EDGE, hex, PALETTE, POINTS_SIZE, RADIUS } from '../../ui/theme';
 import { makeLabel } from './text';
 
 /** Everything the tile needs to know to draw itself. Plain data, so equal looks can be skipped. */
 export type TileLook =
   /** `premium` is 0, 2 or 3. */
   | { kind: 'empty'; premium: number }
-  /** `word`: part of a scored (closed) word, a valid but open word, or neither. */
-  | { kind: 'letter'; letter: string; word: 'none' | 'open' | 'scored'; target: boolean }
+  /** `word`: part of a scored (closed) word, a valid but open word, or neither. `premium`: 0, 2 or 3, the square under the letter; it sets the fill. `bad`: part of a run of letters that is not a word (red border). */
+  | { kind: 'letter'; letter: string; word: 'none' | 'open' | 'scored'; premium: number; bad: boolean; target: boolean }
   | { kind: 'filler'; target: boolean }
   /** The falling piece: same faces as a placed tile, with the accent border and glow ring. */
   | { kind: 'piece'; face: 'letter' | 'wildcard' | 'filler'; letter: string };
@@ -22,12 +24,15 @@ export class TileView {
   readonly root: Phaser.GameObjects.Container;
   private readonly gfx: Phaser.GameObjects.Graphics;
   private readonly label: Phaser.GameObjects.Text;
+  /** The letter's points, small, in the bottom-right corner. */
+  private readonly points: Phaser.GameObjects.Text;
   private lookKey = '';
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     this.gfx = scene.add.graphics();
     this.label = makeLabel(scene, 0, 0, '', { size: 20 });
-    this.root = scene.add.container(x, y, [this.gfx, this.label]);
+    this.points = makeLabel(scene, HALF - 3, HALF - 2, '', { size: POINTS_SIZE.tile, weight: 600 }).setOrigin(1, 1).setAlpha(0.75);
+    this.root = scene.add.container(x, y, [this.gfx, this.label, this.points]);
   }
 
   setLook(look: TileLook): void {
@@ -40,8 +45,8 @@ export class TileView {
         this.drawEmpty(look.premium);
         break;
       case 'letter':
-        this.drawFace(look.word === 'scored' ? PALETTE.ok : look.word === 'open' ? PALETTE.open : PALETTE.tile, look.word === 'scored' ? PALETTE.okBorder : PALETTE.line, look.target);
-        this.setText(look.letter, 20, PALETTE.ink);
+        this.drawFace(PALETTE[tileFill(look.word, look.premium)], look.word === 'scored' ? PALETTE.okBorder : PALETTE.line, look.target, look.bad);
+        this.setText(look.letter, 20, PALETTE.ink, letterValue(look.letter));
         break;
       case 'filler':
         this.gfx.fillStyle(hex(PALETTE.fill));
@@ -63,12 +68,15 @@ export class TileView {
   }
 
   /** A raised tile: a 2 px edge below, the face, and a 1 px border. */
-  private drawFace(fill: string, border: string, target: boolean): void {
+  private drawFace(fill: string, border: string, target: boolean, bad: boolean): void {
     this.gfx.fillStyle(hex(PALETTE.shadow));
     this.gfx.fillRoundedRect(-HALF, -HALF + EDGE, CELL, CELL, RADIUS);
     this.gfx.fillStyle(hex(fill));
     this.gfx.fillRoundedRect(-HALF, -HALF, CELL, CELL, RADIUS);
-    this.strokeBorder(target ? PALETTE.accent : border, 1);
+    // The shovel's target outline wins over the penalty border, so the player can still see what they can tap.
+    if (target) this.strokeBorder(PALETTE.accent, 1);
+    else if (bad) this.strokeBorder(PALETTE.bad, 2);
+    else this.strokeBorder(border, 1);
   }
 
   private drawPiece(face: 'letter' | 'wildcard' | 'filler', letter: string): void {
@@ -80,7 +88,7 @@ export class TileView {
     this.gfx.fillStyle(hex(face === 'filler' ? PALETTE.fill : PALETTE.tile));
     this.gfx.fillRoundedRect(-HALF, -HALF, CELL, CELL, RADIUS);
     this.strokeBorder(PALETTE.accent, 2);
-    this.setText(face === 'filler' ? '' : letter, 20, face === 'wildcard' ? PALETTE.accent : PALETTE.ink);
+    this.setText(face === 'filler' ? '' : letter, 20, face === 'wildcard' ? PALETTE.accent : PALETTE.ink, face === 'filler' ? undefined : letterValue(letter));
   }
 
   /** Strokes inside the tile edge so the border never grows the tile. */
@@ -90,7 +98,9 @@ export class TileView {
     this.gfx.strokeRoundedRect(-HALF + inset, -HALF + inset, CELL - width, CELL - width, RADIUS);
   }
 
-  private setText(text: string, size: number, color: string): void {
+  /** `points` is the small corner number; leave it out for tiles that have no letter. */
+  private setText(text: string, size: number, color: string, points?: number): void {
     this.label.setText(text).setFontSize(size).setColor(color);
+    this.points.setText(points === undefined ? '' : String(points));
   }
 }

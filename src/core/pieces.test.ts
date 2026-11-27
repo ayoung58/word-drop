@@ -46,16 +46,16 @@ describe('setPieceKind', () => {
     setPieceKind(s, p, 'consonant');
     expect(p.kind).toBe('consonant');
     expect(p.letter).toBe(next);
-    expect(s.lastLetterType).toBe('consonant');
+    expect(s.lastType).toBe('consonant');
   });
 
-  it('gives a filler no letter and does not change the last letter type', () => {
+  it('gives a filler no letter, and remembers the filler as the last type used', () => {
     const s = createGame(7);
     const p = pieceOf(s);
     setPieceKind(s, p, 'filler');
     expect(p.kind).toBe('filler');
     expect(p.letter).toBeNull();
-    expect(s.lastLetterType).toBe('vowel');
+    expect(s.lastType).toBe('filler');
   });
 
   it('gives a wildcard "?" and never returns it to a queue', () => {
@@ -63,6 +63,7 @@ describe('setPieceKind', () => {
     const p = pieceOf(s);
     setPieceKind(s, p, 'wildcard');
     expect(p.letter).toBe('?');
+    expect(s.lastType).toBe('vowel'); // a wildcard is a powerup, not a type the next piece should copy
     setPieceKind(s, p, 'consonant');
     expect([...s.vowelQueue, ...s.consonantQueue]).not.toContain('?');
   });

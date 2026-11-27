@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cellAt, setCell } from './board';
-import { CONSONANT_BAG, FREEZE_TICKS, PEEK_DROPS, VOWEL_BAG } from './config';
+import { CONSONANT_BAG, FILLER_COST, FREEZE_TICKS, PEEK_DROPS, VOWEL_BAG } from './config';
 import { createGame, step } from './game';
 import { buttonPreview } from './pieces';
 import { evaluate } from './scoring';
@@ -98,10 +98,33 @@ describe('switching piece type', () => {
     expect(piece(step(s, { type: 'switch', to: 'vowel' })).kind).toBe('vowel');
   });
 
-  it('places a filler that costs one point', () => {
+  it('places a filler that costs FILLER_COST (nothing, for now)', () => {
     const s = run(createGame(7), { type: 'switch', to: 'filler' }, ...times(10, { type: 'drop' }));
     expect(cellAt(s.grid, 9, 3)?.kind).toBe('filler');
-    expect(evaluate(s, dict).score).toBe(-1);
+    expect(evaluate(s, dict).score).toBe(0 - FILLER_COST);
+  });
+
+  it('keeps the filler selected for the next piece, and for the one after that', () => {
+    let s = run(createGame(7), { type: 'switch', to: 'filler' }, ...times(10, { type: 'drop' }));
+    expect(piece(s).kind).toBe('filler');
+    expect(piece(s).left).toEqual([]);
+    s = run(s, ...times(10, { type: 'drop' }));
+    expect(piece(s).kind).toBe('filler');
+    expect(s.placed).toBe(2);
+  });
+
+  it('lets the player leave filler, and then the next piece follows the new choice', () => {
+    let s = run(createGame(7), { type: 'switch', to: 'filler' }, ...times(10, { type: 'drop' }));
+    s = run(s, { type: 'switch', to: 'consonant' });
+    expect(piece(s).kind).toBe('consonant');
+    s = run(s, ...times(10, { type: 'drop' }));
+    expect(piece(s).kind).toBe('consonant');
+  });
+
+  it('keeps the vowel or consonant choice for the next piece when a wildcard was dropped in between', () => {
+    const s = run(createGame(7), { type: 'switch', to: 'consonant' }, { type: 'wildcard' }, ...times(10, { type: 'drop' }));
+    expect(s.placed).toBe(1);
+    expect(piece(s).kind).toBe('consonant');
   });
 });
 

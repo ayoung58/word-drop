@@ -15,7 +15,7 @@ export function createGame(seed: number): GameState {
     piece: null,
     vowelQueue: [],
     consonantQueue: [],
-    lastLetterType: 'vowel',
+    lastType: 'vowel',
     placed: 0,
     spent: 0,
     charges: { ...START_CHARGES },
@@ -82,7 +82,7 @@ function spawn(s: GameState): void {
     return;
   }
   const piece: Piece = { row: 0, col, kind: 'vowel', letter: null, left: [] };
-  setPieceKind(s, piece, s.lastLetterType);
+  setPieceKind(s, piece, s.lastType);
   s.piece = piece;
 }
 

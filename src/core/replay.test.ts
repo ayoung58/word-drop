@@ -37,14 +37,15 @@ describe('replaying a game', () => {
   it('is stable across code changes (golden game)', () => {
     // These numbers were recorded from a known-good run. If this test fails after a change you
     // meant to make (letter bags, rng, piece rules, scoring), check the change was intended, then
-    // update the numbers. If you did not mean to change game behaviour, you broke determinism.
-    expect(fingerprint(createGame(2026))).toBe(268625160);
+    // update the numbers (last updated in M1: Scrabble letter frequencies, bad-run penalties, free fillers).
+    // If you did not mean to change game behaviour, you broke determinism.
+    expect(fingerprint(createGame(2026))).toBe(2322213734);
     const end = replay(createGame(2026), actions);
-    expect(end.placed).toBe(87);
+    expect(end.placed).toBe(104);
     expect(end.over).toBe(false);
-    expect(end.spent).toBe(185);
-    expect(evaluate(end, dict).score).toBe(-195);
-    expect(fingerprint(end)).toBe(3530047589);
+    expect(end.spent).toBe(205);
+    expect(evaluate(end, dict).score).toBe(-387);
+    expect(fingerprint(end)).toBe(1973738379);
   });
 
   it('gives each calendar date its own, repeatable board', () => {

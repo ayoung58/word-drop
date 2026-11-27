@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { audio } from '../../audio';
-import { fallIntervalMs } from '../../core/config';
+import { FALL_INTERVAL_MS } from '../../core/config';
 import { createGame, step } from '../../core/game';
 import { evaluate } from '../../core/scoring';
 import type { Action, Evaluation, GameState, WordHit } from '../../core/types';
@@ -68,7 +68,7 @@ export class Play extends Phaser.Scene {
   override update(_time: number, delta: number): void {
     if (this.paused || this.ending || this.state.over) return;
     this.sinceTick += delta;
-    if (this.sinceTick >= fallIntervalMs(this.state.placed)) {
+    if (this.sinceTick >= FALL_INTERVAL_MS) {
       this.sinceTick = 0;
       this.apply({ type: 'tick' });
     }
@@ -188,9 +188,11 @@ export class Play extends Phaser.Scene {
   }
 
   private refresh(animate: boolean): void {
-    this.board.render(this.state, this.result.words, this.shovelArmed);
+    this.board.render(this.state, this.result.words, this.result.badRuns, this.shovelArmed);
     this.controls.update(this.state, this.shovelArmed);
-    this.hud.setScore(this.result.score, animate);
+    // The main score is only what is on the board; the shovel total sits beside it.
+    this.hud.setScore(this.result.boardScore, animate);
+    this.hud.setShovelPenalty(this.state.spent);
     this.hud.setPaused(this.paused && !this.shovelArmed);
     this.hud.setStatus(this.statusText());
   }

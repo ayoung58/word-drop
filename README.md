@@ -4,7 +4,7 @@
 
 A mobile-first falling-letter word puzzle. Letters, fillers and powerups fall onto an 8 x 10 grid.
 Any run of three or more letters that is closed off by a wall or a filler block becomes a word and
-scores. Break a word and you lose its points, so every drop is a decision.
+scores. Letters that sit side by side without making a word cost their points, and breaking a word loses its points, so every drop is a decision. Letters use Scrabble values and Scrabble frequencies, and each tile shows its points.
 
 The full design is in [docs/GDD.md](docs/GDD.md). What is built, what is next and what is still
 broken is in [docs/PROJECT_STATUS_AND_ROADMAP.md](docs/PROJECT_STATUS_AND_ROADMAP.md).

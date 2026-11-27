@@ -17,6 +17,7 @@ export const PALETTE = {
   ok: '#1C6B58', // letter in a scored (closed) word
   okBorder: '#34E0B4',
   open: '#6B5A1F', // letter in a valid word that is not closed yet
+  bad: '#E5484D', // border of a letter in a run of letters that is not a word (it costs points)
   x2: '#213A6E', // double-word square
   x3: '#5A2748', // triple-word square
   accent: '#2EE6D6', // the falling piece and the selected button
@@ -30,6 +31,9 @@ export const FONT = {
   /** Weights the game uses, so Boot can wait for exactly these. */
   weights: [600, 700],
 } as const;
+
+/** Point values in small type: in the corner of a tile, and beside the letter on the Vowel and Consonant buttons. */
+export const POINTS_SIZE = { tile: 9, button: 10 } as const;
 
 /** One corner radius everywhere. */
 export const RADIUS = 4;
